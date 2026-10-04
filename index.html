@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leonardo Ramalho · SOC / Blue Team</title>
+<meta name="description" content="Leonardo Ramalho, Analista de TI com foco em SOC / Blue Team. Segurança no dia a dia na Wipro e o Nexora Security Lab: Wazuh, Sysmon, pfSense, Active Directory e ataques mapeados no MITRE ATT&amp;CK.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Leonardo Ramalho · SOC / Blue Team">
+<meta property="og:description" content="Segurança no dia a dia na Wipro e o Nexora Security Lab: rede segmentada, Active Directory, hardening, SIEM Wazuh e ataques mapeados no MITRE ATT&amp;CK.">
+<meta name="theme-color" content="#0a0e12">
+<script src="./support.js"></script>
+</head>
+<body>
+<noscript><div style="padding:24px;font-family:system-ui,sans-serif;color:#d5dee4;background:#0a0e12">Leonardo Ramalho · Analista de TI · SOC / Blue Team. Este site precisa de JavaScript. Veja o laboratório em <a href="https://github.com/imleozzin/nexora-security-homelab" style="color:#4be3a6">github.com/imleozzin/nexora-security-homelab</a> ou o perfil em <a href="https://www.linkedin.com/in/leonardo-ramalho-/" style="color:#4be3a6">LinkedIn</a>.</div></noscript>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+html{scroll-behavior:smooth}
+body{margin:0;background:#0a0e12;color:#d5dee4;font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#4be3a6;text-decoration:none}
+a:hover{color:#8ff0c9}
+::selection{background:#4be3a6;color:#0a0e12}
+@keyframes blink{50%{opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-16}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(75,227,166,.6)}50%{box-shadow:0 0 0 5px rgba(75,227,166,0)}}
+@keyframes glitch{0%{transform:translate(0);text-shadow:none}20%{transform:translate(-1px,1px);text-shadow:2px 0 #ffb547,-2px 0 #4be3a6}40%{transform:translate(1px,-1px);text-shadow:-2px 0 #ffb547,2px 0 #6cc4ff}60%{transform:translate(-1px,0);text-shadow:1px 0 #ffb547,-1px 0 #4be3a6}100%{transform:translate(0);text-shadow:none}}
+@keyframes scan{from{transform:translateY(-100%)}to{transform:translateY(100vh)}}
+@media (max-width:720px){
+[data-atk="wrap"]{min-width:0 !important}
+[data-atk="head"]{display:none !important}
+[data-atk="row"]{display:flex !important;flex-direction:column;gap:6px !important;padding:14px !important}
+}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none !important;transition:none !important}}
+</style>
+</helmet>
+<div style="min-height:100vh;position:relative;background-color:#0a0e12;background-image:linear-gradient(rgba(75,227,166,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(75,227,166,.035) 1px,transparent 1px);background-size:32px 32px">
+<sc-if value="{{ scanlines }}" hint-placeholder-val="{{ true }}">
+<div aria-hidden="true" style="position:fixed;inset:0;pointer-events:none;z-index:50;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 3px)"></div>
+<div aria-hidden="true" style="position:fixed;left:0;right:0;top:0;height:140px;pointer-events:none;z-index:50;background:linear-gradient(to bottom,transparent,rgba(75,227,166,.035),transparent);animation:scan 9s linear infinite"></div>
+</sc-if>
+
+<header style="position:sticky;top:0;z-index:40;background:rgba(10,14,18,.86);backdrop-filter:blur(8px);border-bottom:1px solid #1b262e">
+<div style="max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px">
+<a href="#top" style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:13px;color:#d5dee4">
+<span style="width:8px;height:8px;border-radius:50%;background:#4be3a6;animation:pulse 2s infinite"></span>
+<span>leonardo@soc:<span style="color:#4be3a6">~</span></span>
+</a>
+<div role="group" aria-label="Idioma / Language" style="display:flex;border:1px solid #24323b;border-radius:4px;overflow:hidden;font-family:'JetBrains Mono',monospace;font-size:12px">
+<button onClick="{{ setPt }}" aria-pressed="{{ isPt }}" style="background:{{ ptBg }};color:{{ ptFg }};border:0;padding:7px 12px;cursor:pointer;font:inherit;font-weight:700" style-hover="animation:glitch .3s steps(2,end) 1">PT</button>
+<button onClick="{{ setEn }}" aria-pressed="{{ isEn }}" style="background:{{ enBg }};color:{{ enFg }};border:0;padding:7px 12px;cursor:pointer;font:inherit;font-weight:700" style-hover="animation:glitch .3s steps(2,end) 1">EN</button>
+</div>
+</div>
+</header>
+
+<main id="top" style="position:relative;z-index:1">
+<section data-screen-label="Topo" style="max-width:1120px;margin:0 auto;padding:64px 20px 72px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:40px;align-items:center">
+<div style="display:flex;flex-direction:column;gap:20px;min-width:0">
+<div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#8a9aa6;display:flex;flex-direction:column;gap:6px">
+<span>[ <span style="color:#4be3a6">ok</span> ] soc-console · tty1</span>
+<span><span style="color:#4be3a6">leonardo@soc</span>:~$ <span style="color:#d5dee4">{{ bootCmd }}</span><span style="display:{{ bootCursor }};color:#4be3a6;animation:blink 1s steps(1) infinite">▌</span></span>
+</div>
+<div style="display:flex;flex-direction:column;gap:20px;opacity:{{ heroOp }};transform:translateY({{ heroY }});transition:opacity .5s ease,transform .5s ease">
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:20px">
+<figure style="margin:0;width:116px;flex:none;background:#0e141a;border:1px solid #2a3a44;border-radius:6px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.4)">
+<div style="display:flex;align-items:center;gap:4px;padding:5px 7px;border-bottom:1px solid #1e2a33;font-family:'JetBrains Mono',monospace;font-size:9px;color:#6b7b86">
+<span style="width:6px;height:6px;border-radius:50%;background:#26343d"></span><span style="width:6px;height:6px;border-radius:50%;background:#26343d"></span><span style="width:6px;height:6px;border-radius:50%;background:#26343d"></span>
+<span style="margin-left:4px">foto.jpg</span>
+</div>
+<div style="position:relative;aspect-ratio:1/1;background:#0b1015">
+<sc-if value="{{ img.foto }}" hint-placeholder-val="{{ false }}"><img src="{{ fotoSrc }}" alt="Leonardo Ramalho" style="width:100%;height:100%;object-fit:cover;display:block"></sc-if>
+<sc-if value="{{ noImg.foto }}" hint-placeholder-val="{{ true }}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#0e141a 0,#0e141a 6px,#121a21 6px,#121a21 12px);font-family:'JetBrains Mono',monospace;font-size:11px;color:#6b7b86">foto.jpg</div></sc-if>
+<div aria-hidden="true" style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,.08) 0,rgba(0,0,0,.08) 1px,transparent 1px,transparent 3px)"></div>
+</div>
+</figure>
+<div style="min-width:0;flex:1 1 260px">
+<h1 style="margin:0;font-family:'JetBrains Mono',monospace;font-weight:700;font-size:clamp(34px,5.6vw,64px);line-height:1.02;letter-spacing:-.02em;color:#f1f6f8">Leonardo Ramalho</h1>
+<p style="margin:12px 0 0;font-family:'JetBrains Mono',monospace;font-size:clamp(15px,2vw,18px);color:#4be3a6">{{ t.role }}</p>
+</div>
+</div>
+<p style="margin:0;font-size:18px;line-height:1.6;color:#c3cdd4;max-width:56ch;text-wrap:pretty">{{ t.tagline }}</p>
+<div style="display:flex;flex-wrap:wrap;gap:8px 16px;font-size:14px;color:#8a9aa6">
+<span>{{ t.loc }}</span>
+<span style="display:flex;align-items:center;gap:8px;color:#4be3a6"><span style="width:6px;height:6px;border-radius:50%;background:#4be3a6"></span>{{ t.open }}</span>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">
+<a href="Leonardo_Ramalho_CV_SOC.pdf" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#4be3a6;color:#0a0e12;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;color:#0a0e12;background:#7ff0c4">↓ {{ t.cv }}</a>
+<a href="https://github.com/imleozzin/nexora-security-homelab" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid #2c3d47;color:#d5dee4;font-family:'JetBrains Mono',monospace;font-size:14px;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;border-color:#4be3a6;color:#4be3a6">&gt; {{ t.btnLab }}</a>
+<a href="https://www.linkedin.com/in/leonardo-ramalho-/" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid #2c3d47;color:#d5dee4;font-family:'JetBrains Mono',monospace;font-size:14px;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;border-color:#4be3a6;color:#4be3a6">LinkedIn</a>
+<a href="https://tryhackme.com/p/Imleozin" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid #2c3d47;color:#d5dee4;font-family:'JetBrains Mono',monospace;font-size:14px;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;border-color:#4be3a6;color:#4be3a6">TryHackMe</a>
+</div>
+</div>
+</div>
+
+<aside style="background:#0e141a;border:1px solid #1e2a33;border-radius:6px;overflow:hidden;min-width:0;box-shadow:0 0 0 1px rgba(75,227,166,.04),0 20px 60px rgba(0,0,0,.4)">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;border-bottom:1px solid #1e2a33;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6">
+<span style="display:flex;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#26343d"></span><span style="width:9px;height:9px;border-radius:50%;background:#26343d"></span><span style="width:9px;height:9px;border-radius:50%;background:#26343d"></span></span>
+<span>lab/alerts.log</span>
+</div>
+<div style="padding:18px 18px 8px">
+<h2 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:16px;color:#f1f6f8">{{ t.hlTitle }}</h2>
+</div>
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ hl }}" as="h" hint-placeholder-count="3">
+<div style="padding:14px 18px;border-top:1px solid #172129;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;opacity:{{ h.op }};transform:translateX({{ h.x }});transition:opacity .4s ease,transform .4s ease">
+<span style="grid-row:span 2;width:3px;align-self:stretch;background:{{ h.color }};border-radius:2px"></span>
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;font-family:'JetBrains Mono',monospace;font-size:13px">
+<span style="color:#f1f6f8;font-weight:700">{{ h.name }}</span>
+<span style="color:#4be3a6">{{ h.mitre }}</span>
+</div>
+<span style="font-size:14px;line-height:1.5;color:#b4c0c8">{{ h.desc }}</span>
+</div>
+</sc-for>
+</div>
+</aside>
+</section>
+
+<section id="sobre" data-screen-label="Sobre" style="max-width:1120px;margin:0 auto;padding:56px 20px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="about" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.about }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.about }}</span>
+</div>
+<p style="margin:0;font-size:18px;line-height:1.7;color:#c9d3d9;max-width:72ch;text-wrap:pretty">{{ t.about }}</p>
+</section>
+
+<section id="experiencia" data-screen-label="Experiência" style="max-width:1120px;margin:0 auto;padding:56px 20px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="exp" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.exp }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.exp }}</span>
+</div>
+<div style="background:#0e141a;border:1px solid #1e2a33;border-radius:6px;padding:24px;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 20px">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px">
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:20px;color:#f1f6f8">Wipro</h3>
+<span style="font-size:16px;color:#c3cdd4">{{ t.expRole }}</span>
+</div>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#4be3a6">{{ t.expDate }}</span>
+</div>
+<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ t.expItems }}" as="it" hint-placeholder-count="5">
+<li style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;font-size:16px;line-height:1.55;color:#c9d3d9"><span style="font-family:'JetBrains Mono',monospace;color:#4be3a6">›</span><span>{{ it }}</span></li>
+</sc-for>
+</ul>
+<div data-counters="1" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:#1e2a33;border:1px solid #1e2a33;border-radius:4px;overflow:hidden">
+<sc-for list="{{ counters }}" as="c" hint-placeholder-count="4">
+<div style="background:#0b1015;padding:18px 16px;display:flex;flex-direction:column;gap:6px">
+<span style="font-family:'JetBrains Mono',monospace;font-size:clamp(26px,3.4vw,34px);font-weight:700;color:#f1f6f8;font-variant-numeric:tabular-nums">{{ c.text }}</span>
+<span style="font-size:14px;color:#8a9aa6">{{ c.label }}</span>
+</div>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section id="projetos" data-screen-label="Projetos" style="max-width:1120px;margin:0 auto;padding:56px 20px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="proj" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.proj }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.proj }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:16px">
+
+<sc-if value="{{ hasFeat }}" hint-placeholder-val="{{ true }}">
+<article style="grid-column:1/-1;background:#0e141a;border:1px solid #2a4a3f;border-radius:6px;overflow:hidden;box-shadow:0 0 40px rgba(75,227,166,.05)">
+<div style="padding:24px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px">
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6">projetos/nexora-security-lab/</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ feat.color }};border:1px solid {{ feat.color }};padding:3px 8px;border-radius:3px">● {{ feat.status }}</span>
+</div>
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(22px,3vw,28px);color:#f1f6f8">{{ feat.name }}</h3>
+<p style="margin:0;font-size:17px;line-height:1.6;color:#c3cdd4;max-width:64ch">{{ feat.desc }}</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ feat.tags }}" as="tg" hint-placeholder-count="6"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#9fb0bb;background:#131c23;border:1px solid #1f2c35;padding:4px 8px;border-radius:3px">{{ tg }}</span></sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px">
+<button onClick="{{ toggleExpand }}" aria-expanded="{{ expanded }}" style="display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid #4be3a6;color:#4be3a6;font-family:'JetBrains Mono',monospace;font-size:14px;padding:11px 16px;border-radius:4px;cursor:pointer;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;background:rgba(75,227,166,.08)">{{ expandLabel }}</button>
+<a href="{{ feat.link }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid #2c3d47;color:#d5dee4;font-family:'JetBrains Mono',monospace;font-size:14px;padding:11px 16px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;border-color:#4be3a6;color:#4be3a6">↗ {{ t.repo }}</a>
+</div>
+</div>
+
+<sc-if value="{{ expanded }}" hint-placeholder-val="{{ false }}">
+<div style="border-top:1px solid #1e2a33;padding:24px;display:flex;flex-direction:column;gap:32px;background:#0b1015">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px">
+<div style="display:flex;flex-direction:column;gap:8px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># {{ t.ctx }}</h4>
+<p style="margin:0;font-size:16px;line-height:1.6;color:#c9d3d9">{{ t.ctxText }}</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># {{ t.steps }}</h4>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:'JetBrains Mono',monospace;font-size:13px">
+<sc-for list="{{ steps }}" as="s" hint-placeholder-count="6">
+<span style="display:flex;align-items:center;gap:6px"><span style="color:#d5dee4;border:1px solid #24323b;padding:4px 8px;border-radius:3px">{{ s.label }}</span><span style="color:#4be3a6;display:{{ s.arrow }}">→</span></span>
+</sc-for>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># {{ t.net }}</h4>
+<p style="margin:0;font-size:15px;color:#b4c0c8">{{ t.netNote }}</p>
+<div style="position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,minmax(96px,1fr));gap:10px;padding:6px 0">
+<svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible">
+<line x1="50" y1="50" x2="50" y2="16" style="stroke:#4be3a6;stroke-opacity:.55;stroke-width:1.5;stroke-dasharray:3 5;vector-effect:non-scaling-stroke;animation:dash 1.1s linear infinite"></line>
+<line x1="50" y1="50" x2="16" y2="16" style="stroke:#4be3a6;stroke-opacity:.55;stroke-width:1.5;stroke-dasharray:3 5;vector-effect:non-scaling-stroke;animation:dash 1.1s linear infinite"></line>
+<line x1="50" y1="50" x2="84" y2="16" style="stroke:#4be3a6;stroke-opacity:.55;stroke-width:1.5;stroke-dasharray:3 5;vector-effect:non-scaling-stroke;animation:dash 1.3s linear infinite"></line>
+<line x1="50" y1="50" x2="16" y2="84" style="stroke:#4be3a6;stroke-opacity:.55;stroke-width:1.5;stroke-dasharray:3 5;vector-effect:non-scaling-stroke;animation:dash 1.2s linear infinite"></line>
+<line x1="50" y1="50" x2="84" y2="84" style="stroke:#ff5d5d;stroke-opacity:.7;stroke-width:1.5;stroke-dasharray:2 7;vector-effect:non-scaling-stroke"></line>
+</svg>
+<div style="grid-column:2;grid-row:1;align-self:start;justify-self:center;position:relative;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6;background:#0b1015;border:1px solid #24323b;padding:5px 10px;border-radius:3px">WAN · NAT</div>
+<div style="grid-column:1;grid-row:1;position:relative;background:#0e141a;border:1px solid #24323b;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:4px;align-self:center;min-width:0">
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#f1f6f8">{{ t.zones.srv }}</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4be3a6;overflow-wrap:anywhere">192.168.10.0/24</span>
+<span style="font-size:12px;color:#9fb0bb;line-height:1.4">SRV-DC01 · Windows Server 2025</span>
+</div>
+<div style="grid-column:3;grid-row:1;position:relative;background:#0e141a;border:1px solid #24323b;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:4px;align-self:center;min-width:0">
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#f1f6f8">{{ t.zones.usr }}</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4be3a6;overflow-wrap:anywhere">192.168.20.0/24</span>
+<span style="font-size:12px;color:#9fb0bb;line-height:1.4">WS-RH01 · WS-FIN01 · Windows 11</span>
+</div>
+<div style="grid-column:2;grid-row:2;position:relative;align-self:center;background:#0f1d19;border:1px solid #4be3a6;border-radius:4px;padding:12px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;box-shadow:0 0 24px rgba(75,227,166,.18);min-width:0">
+<span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#4be3a6">FW01</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#d5dee4">pfSense</span>
+</div>
+<div style="grid-column:1;grid-row:3;position:relative;background:#0e141a;border:1px solid #24323b;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:4px;align-self:center;min-width:0">
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#f1f6f8">{{ t.zones.sec }}</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#4be3a6;overflow-wrap:anywhere">192.168.30.0/24</span>
+<span style="font-size:12px;color:#9fb0bb;line-height:1.4">SRV-SIEM · Wazuh</span>
+</div>
+<div style="grid-column:3;grid-row:3;position:relative;background:#170e10;border:1px dashed #ff5d5d;border-radius:4px;padding:10px;display:flex;flex-direction:column;gap:4px;align-self:center;min-width:0">
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:#ff7a7a">{{ t.zones.atk }}</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#ff7a7a;overflow-wrap:anywhere">192.168.99.0/24</span>
+<span style="font-size:12px;color:#d9b3b3;line-height:1.4">KALI01 · {{ t.zones.atkNote }}</span>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># {{ t.atk }}</h4>
+<div style="overflow-x:auto;border:1px solid #1e2a33;border-radius:4px">
+<div data-atk="wrap" style="min-width:760px;display:flex;flex-direction:column">
+<div data-atk="head" style="display:grid;grid-template-columns:52px 1.3fr .8fr 2fr 1.25fr;gap:14px;padding:10px 14px;background:#111920;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.06em">
+<span>id</span><span>{{ t.th.0 }}</span><span>{{ t.th.1 }}</span><span>{{ t.th.2 }}</span><span>{{ t.th.3 }}</span>
+</div>
+<sc-for list="{{ attacks }}" as="a" hint-placeholder-count="6">
+<div data-atk="row" style="display:grid;grid-template-columns:52px 1.3fr .8fr 2fr 1.25fr;gap:14px;padding:12px 14px;border-top:1px solid #172129;align-items:start;opacity:{{ a.op }};transform:translateY({{ a.y }});transition:opacity .35s ease,transform .35s ease">
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#5f707b">{{ a.id }}</span>
+<span style="font-size:14px;line-height:1.45;color:#f1f6f8;font-weight:500">{{ a.scen }}</span>
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#4be3a6">{{ a.mitre }}</span>
+<span style="font-size:14px;line-height:1.45;color:#b4c0c8">{{ a.ev }}</span>
+<span style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ a.badges }}" as="b"><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:4px 7px;border-radius:3px;color:{{ b.color }};border:1px solid {{ b.border }};background:{{ b.bg }};box-shadow:{{ b.glow }};transition:all .4s ease">{{ b.label }}</span></sc-for>
+</span>
+</div>
+</sc-for>
+</div>
+</div>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#b4c0c8;max-width:80ch"><span style="font-family:'JetBrains Mono',monospace;color:#ffb547">{{ t.note }}:</span> {{ t.noteText }}</p>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># {{ t.evTitle }}</h4>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px">
+<sc-for list="{{ evidence }}" as="ev" hint-placeholder-count="3">
+<figure style="margin:0;background:#0e141a;border:1px solid #24323b;border-radius:6px;overflow:hidden;display:flex;flex-direction:column">
+<div style="display:flex;align-items:center;gap:5px;padding:7px 10px;border-bottom:1px solid #1e2a33;font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a9aa6">
+<span style="width:7px;height:7px;border-radius:50%;background:#26343d"></span><span style="width:7px;height:7px;border-radius:50%;background:#26343d"></span><span style="width:7px;height:7px;border-radius:50%;background:#26343d"></span>
+<span style="margin-left:6px">{{ ev.file }}</span>
+</div>
+<button onClick="{{ ev.open }}" aria-label="{{ ev.cap }}" style="display:block;padding:0;border:0;background:#070a0d;cursor:zoom-in;aspect-ratio:16/10;position:relative;width:100%">
+<sc-if value="{{ ev.ok }}"><img src="{{ ev.file }}" alt="{{ ev.cap }}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block"></sc-if>
+<sc-if value="{{ ev.missing }}"><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#0e141a 0,#0e141a 8px,#121a21 8px,#121a21 16px);font-family:'JetBrains Mono',monospace;font-size:13px;color:#6b7b86">{{ ev.file }}</span></sc-if>
+</button>
+<figcaption style="padding:10px 12px;font-size:14px;line-height:1.45;color:#c3cdd4;border-top:1px solid #1e2a33">{{ ev.cap }}</figcaption>
+</figure>
+</sc-for>
+</div>
+</div>
+
+<div style="background:#0d1310;border:1px solid #2a4a3f;border-radius:6px;overflow:hidden">
+<div data-case="1" style="padding:10px 16px;border-bottom:1px solid #1e3a31;background:#0f1a16;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;overflow-wrap:anywhere"><span style="color:#4be3a6">leonardo@soc</span>:~/06-relatorios-incidente{{ h.case }}<span style="color:#4be3a6;animation:blink 1s steps(1) infinite">▌</span></div>
+<div style="padding:20px 16px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px">
+<div style="display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 280px">
+<span style="font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#f1f6f8">{{ t.caseTitle }}</span>
+<span style="font-size:15px;line-height:1.55;color:#c3cdd4">{{ t.caseText }}</span>
+</div>
+<a href="https://github.com/imleozzin/nexora-security-homelab/blob/main/06-relatorios-incidente/relatorio-01.md" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#4be3a6;color:#0a0e12;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;color:#0a0e12;background:#7ff0c4">&gt; {{ t.caseBtn }}</a>
+</div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:24px">
+<div style="display:flex;flex-direction:column;gap:10px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># Hardening</h4>
+<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+<sc-for list="{{ t.hardList }}" as="hd" hint-placeholder-count="8"><li style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;font-size:15px;line-height:1.5;color:#c9d3d9"><span style="font-family:'JetBrains Mono',monospace;color:#4be3a6">+</span><span>{{ hd }}</span></li></sc-for>
+</ul>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<h4 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6;text-transform:uppercase;letter-spacing:.08em"># Links</h4>
+<div style="display:flex;flex-direction:column;gap:8px;font-family:'JetBrains Mono',monospace;font-size:14px">
+<a href="https://github.com/imleozzin/nexora-security-homelab" target="_blank" rel="noopener" style="color:#4be3a6;align-self:flex-start;padding:4px 0" style-hover="animation:glitch .3s steps(2,end) 1;color:#8ff0c9">↗ {{ t.lRepo }}</a>
+<a href="https://github.com/imleozzin/nexora-security-homelab/tree/main/06-relatorios-incidente" target="_blank" rel="noopener" style="color:#4be3a6;align-self:flex-start;padding:4px 0" style-hover="animation:glitch .3s steps(2,end) 1;color:#8ff0c9">↗ {{ t.lInc }}</a>
+<a href="https://github.com/imleozzin/nexora-security-homelab/tree/main/07-licoes-aprendidas" target="_blank" rel="noopener" style="color:#4be3a6;align-self:flex-start;padding:4px 0" style-hover="animation:glitch .3s steps(2,end) 1;color:#8ff0c9">↗ {{ t.lLes }}</a>
+</div>
+</div>
+</div>
+</div>
+</sc-if>
+</article>
+</sc-if>
+
+<sc-for list="{{ gridProjects }}" as="p" hint-placeholder-count="2">
+<article style="background:#0e141a;border:1px {{ p.borderStyle }} {{ p.borderColor }};border-radius:6px;padding:22px;display:flex;flex-direction:column;gap:12px;opacity:{{ p.opacity }}">
+<div style="display:flex;justify-content:flex-end">
+<span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:{{ p.color }};border:1px solid {{ p.color }};padding:3px 8px;border-radius:3px">● {{ p.status }}</span>
+</div>
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:19px;color:#f1f6f8">{{ p.name }}</h3>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#c3cdd4;flex:1">{{ p.desc }}</p>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<sc-for list="{{ p.tags }}" as="tg"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#9fb0bb;background:#131c23;border:1px solid #1f2c35;padding:4px 8px;border-radius:3px">{{ tg }}</span></sc-for>
+</div>
+<sc-if value="{{ p.hasLink }}"><a href="{{ p.link }}" target="_blank" rel="noopener" style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#4be3a6;align-self:flex-start" style-hover="animation:glitch .3s steps(2,end) 1">↗ {{ t.repo }}</a></sc-if>
+<sc-if value="{{ p.noLink }}"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#6b7b86">{{ t.noLink }}</span></sc-if>
+</article>
+</sc-for>
+</div>
+</section>
+
+<section id="formacao" data-screen-label="Formação" style="max-width:1120px;margin:0 auto;padding:56px 20px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="edu" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.edu }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.edu }}</span>
+</div>
+<div style="display:flex;flex-direction:column;border:1px solid #1e2a33;border-radius:6px;overflow:hidden">
+<sc-for list="{{ edu }}" as="e" hint-placeholder-count="5">
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 20px;padding:16px 20px;background:#0e141a;border-bottom:1px solid #172129">
+<div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+<span style="font-size:16px;font-weight:600;color:#f1f6f8">{{ e.name }}</span>
+<span style="font-size:14px;color:#8a9aa6">{{ e.org }}</span>
+</div>
+<span style="display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:12px">
+<span style="color:#9fb0bb">{{ e.date }}</span>
+<sc-if value="{{ e.hasSt }}"><span style="color:{{ e.color }};border:1px solid {{ e.color }};padding:3px 8px;border-radius:3px">● {{ e.st }}</span></sc-if>
+</span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section id="stack" data-screen-label="Stack" style="max-width:1120px;margin:0 auto;padding:56px 20px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="stack" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.stack }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.stack }}</span>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px">
+<div style="background:#0e141a;border:1px solid #1e2a33;border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:14px;color:#f1f6f8">[{{ t.stackWork }}]</h3>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ stackWork }}" as="sk" hint-placeholder-count="7"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#d5dee4;background:#131c23;border:1px solid #1f2c35;padding:5px 9px;border-radius:3px">{{ sk }}</span></sc-for></div>
+</div>
+<div style="background:#0e141a;border:1px solid #1e2a33;border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:14px;color:#f1f6f8">[{{ t.stackLab }}]</h3>
+<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ stackLab }}" as="sk" hint-placeholder-count="9"><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#d5dee4;background:#131c23;border:1px solid #1f2c35;padding:5px 9px;border-radius:3px">{{ sk }}</span></sc-for></div>
+</div>
+<div style="background:#0e141a;border:1px solid #1e2a33;border-radius:6px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<h3 style="margin:0;font-family:'JetBrains Mono',monospace;font-size:14px;color:#f1f6f8">[{{ t.langs }}]</h3>
+<p style="margin:0;font-size:15px;line-height:1.6;color:#c9d3d9">{{ t.langsText }}</p>
+</div>
+</div>
+</section>
+
+<section id="contato" data-screen-label="Contato" style="max-width:1120px;margin:0 auto;padding:56px 20px 72px;border-top:1px solid #151f26">
+<div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:24px">
+<h2 data-type="contact" style="margin:0;font-family:'JetBrains Mono',monospace;font-size:clamp(20px,3vw,26px);color:#4be3a6;min-height:1.3em">{{ h.contact }}<span style="animation:blink 1s steps(1) infinite">▌</span></h2>
+<span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a9aa6">// {{ t.sec.contact }}</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px;font-family:'JetBrains Mono',monospace;font-size:clamp(14px,2vw,17px)">
+<a href="https://www.linkedin.com/in/leonardo-ramalho-/" target="_blank" rel="noopener" style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid #172129;color:#d5dee4;overflow-wrap:anywhere" style-hover="animation:glitch .3s steps(2,end) 1;color:#4be3a6"><span style="color:#8a9aa6">linkedin</span><span>→ linkedin.com/in/leonardo-ramalho-</span></a>
+<a href="https://github.com/imleozzin" target="_blank" rel="noopener" style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid #172129;color:#d5dee4;overflow-wrap:anywhere" style-hover="animation:glitch .3s steps(2,end) 1;color:#4be3a6"><span style="color:#8a9aa6">github</span><span>→ github.com/imleozzin</span></a>
+<a href="https://tryhackme.com/p/Imleozin" target="_blank" rel="noopener" style="display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid #172129;color:#d5dee4;overflow-wrap:anywhere" style-hover="animation:glitch .3s steps(2,end) 1;color:#4be3a6"><span style="color:#8a9aa6">tryhackme</span><span>→ tryhackme.com/p/Imleozin</span></a>
+</div>
+<div style="margin-top:24px;display:flex">
+<a href="Leonardo_Ramalho_CV_SOC.pdf" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:8px;background:#4be3a6;color:#0a0e12;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;padding:12px 18px;border-radius:4px;min-height:44px" style-hover="animation:glitch .3s steps(2,end) 1;color:#0a0e12;background:#7ff0c4">↓ {{ t.cv }}</a>
+</div>
+</section>
+</main>
+
+<footer data-screen-label="Rodapé" style="position:relative;z-index:1;border-top:1px solid #1b262e">
+<div style="max-width:1120px;margin:0 auto;padding:24px 20px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6">
+<span>{{ t.footer }}</span>
+<span>© 2026 Leonardo Ramalho</span>
+</div>
+</footer>
+<sc-if value="{{ zoomOpen }}" hint-placeholder-val="{{ false }}">
+<div role="dialog" aria-modal="true" aria-label="{{ zoom.cap }}" onClick="{{ closeZoom }}" style="position:fixed;inset:0;z-index:100;background:rgba(5,8,10,.92);display:flex;align-items:center;justify-content:center;padding:20px;cursor:zoom-out">
+<figure style="margin:0;max-width:min(1200px,100%);max-height:100%;display:flex;flex-direction:column;background:#0e141a;border:1px solid #2a3a44;border-radius:6px;overflow:hidden">
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 12px;border-bottom:1px solid #1e2a33;font-family:'JetBrains Mono',monospace;font-size:12px;color:#8a9aa6">
+<span>{{ zoom.file }}</span>
+<button onClick="{{ closeZoom }}" style="background:transparent;border:1px solid #2c3d47;color:#d5dee4;font-family:inherit;font-size:12px;padding:6px 10px;border-radius:3px;cursor:pointer;min-height:32px">esc ✕</button>
+</div>
+<sc-if value="{{ zoom.ok }}"><img src="{{ zoom.file }}" alt="{{ zoom.cap }}" style="display:block;max-width:100%;max-height:calc(100vh - 160px);object-fit:contain;margin:0 auto"></sc-if>
+<sc-if value="{{ zoom.missing }}"><div style="width:min(800px,90vw);aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#0e141a 0,#0e141a 8px,#121a21 8px,#121a21 16px);font-family:'JetBrains Mono',monospace;font-size:14px;color:#6b7b86">{{ zoom.file }}</div></sc-if>
+<figcaption style="padding:10px 14px;font-size:15px;color:#c3cdd4;border-top:1px solid #1e2a33">{{ zoom.cap }}</figcaption>
+</figure>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;scanlines&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bootAnimation&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;startExpanded&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+// ─── PROJETOS ───────────────────────────────────────────────────────────────
+// Para adicionar um projeto, copie um objeto abaixo, cole no fim do array e edite.
+//   status:   "done" (concluído) | "wip" (em andamento) | "planned" (planejado)
+//             "planned" aparece esmaecido, com borda tracejada e sem link.
+//   link:     URL do repositório, ou null se ainda não houver.
+//   featured: true = cartão de largura total (o conteúdo expandido é o do Nexora).
+//   name/desc aceitam { pt, en }.
+const PROJECTS = [
+  {
+    featured: true,
+    name: { pt: 'Nexora Security Lab', en: 'Nexora Security Lab' },
+    desc: { pt: 'Ambiente corporativo simulado, da rede segmentada à resposta a incidentes.', en: 'Simulated corporate environment, from segmented network to incident response.' },
+    tags: ['pfSense', 'Active Directory', 'GPO', 'Wazuh', 'Sysmon', 'Kali', 'MITRE ATT&CK'],
+    status: 'done',
+    link: 'https://github.com/imleozzin/nexora-security-homelab'
+  },
+  {
+    name: { pt: 'Drills de triagem no Wazuh', en: 'Wazuh triage drills' },
+    desc: { pt: 'Cinco alertas disparados no próprio lab e investigados com cartão de triagem: brute force, spraying, PowerShell ofuscado, admin não autorizado e LLMNR.', en: 'Five alerts triggered in the lab itself and investigated with a triage card: brute force, spraying, obfuscated PowerShell, unauthorized admin and LLMNR.' },
+    tags: ['Wazuh', 'Sysmon', 'Event IDs'],
+    status: 'wip',
+    link: null
+  },
+  {
+    name: { pt: 'Cloud SOC no Microsoft Sentinel', en: 'Cloud SOC on Microsoft Sentinel' },
+    desc: { pt: 'Detecção e investigação em nuvem com conta gratuita do Azure.', en: 'Cloud detection and investigation with a free Azure account.' },
+    tags: ['Azure', 'Sentinel'],
+    status: 'planned',
+    link: null
+  }
+];
+
+const C = { acc: '#4be3a6', amb: '#ffb547', mut: '#8a9aa6', info: '#9fc3ff' };
+const STATUS_COLOR = { done: C.acc, wip: C.amb, planned: C.mut, studying: C.amb };
+
+const ATTACKS = [
+  { mitre: 'T1046', res: ['exp'], pt: ['Reconhecimento com Nmap', 'portas de AD expostas no DC e domínio vazando via LDAP'], en: ['Nmap reconnaissance', 'AD ports exposed on the DC and domain leaking via LDAP'] },
+  { mitre: 'T1110', res: ['det', 'blk'], pt: ['Brute force', 'eventos 4625 em massa e 4740'], en: ['Brute force', 'mass 4625 events and 4740'] },
+  { mitre: 'T1110.003', res: ['det'], pt: ['Password spraying', '4625 com targetUserName variado, uma tentativa por conta'], en: ['Password spraying', '4625 with varied targetUserName, one attempt per account'] },
+  { mitre: 'T1136 · T1098', res: ['det'], pt: ['Conta backdoor promovida a Domain Admin', 'cenário de comprometimento assumido, artefato removido depois'], en: ['Backdoor account promoted to Domain Admin', 'assumed-breach scenario, artifact removed afterwards'] },
+  { mitre: 'T1557.001', res: ['blk'], pt: ['Responder / LLMNR poisoning', 'broadcast não chega à zona de ataque'], en: ['Responder / LLMNR poisoning', "broadcast doesn't reach the attack zone"] },
+  { mitre: 'T1021 · T1047', res: ['det', 'blk'], pt: ['Persistência remota com wmiexec', 'Wazuh regra 92652, possível pass-the-hash; backdoor barrado pelo Defender'], en: ['Remote persistence with wmiexec', 'Wazuh rule 92652, possible pass-the-hash; backdoor stopped by Defender'] }
+];
+const BADGE_COLOR = { det: C.amb, blk: C.acc, exp: C.info };
+
+const STACK_WORK = ['Active Directory', 'MFA', 'BitLocker', 'ManageEngine', 'PowerShell', 'Windows 11', 'ITIL / Zoho'];
+const STACK_LAB = ['Wazuh', 'Sysmon', 'pfSense', 'GPO', 'Windows Server 2025', 'Ubuntu Server', 'Kali Linux', 'MITRE ATT&CK', 'VMware'];
+
+const DICT = {
+  pt: {
+    role: 'Analista de TI · SOC / Blue Team',
+    tagline: 'Cuido de identidade, endpoints e patching no dia a dia de uma operação de TI. No meu laboratório, monto a rede, ataco e investigo o que o SIEM mostra.',
+    loc: 'Piracicaba, SP · Brasil',
+    open: 'Aberto a vagas de SOC / Segurança Júnior',
+    btnLab: 'Ver o laboratório no GitHub',
+    hlTitle: 'Três ataques, três camadas',
+    hl: [
+      { name: 'Brute force', mitre: 'T1110', desc: 'conta bloqueada pela GPO de lockout (evento 4740)' },
+      { name: 'LLMNR poisoning', mitre: 'T1557.001', desc: 'o broadcast não cruza as zonas do pfSense, nada capturado' },
+      { name: 'Persistência remota', mitre: 'T1021 · T1047', desc: 'detectada pelo Wazuh (regra 92652) e barrada pelo Windows Defender' }
+    ],
+    sec: { about: 'sobre', exp: 'experiência', proj: 'projetos', edu: 'formação', stack: 'stack', contact: 'contato' },
+    cmd: { about: '$ cat sobre.txt', exp: '$ cat experiencia.log', proj: '$ ls projetos/', edu: '$ cat formacao.txt', stack: '$ cat stack.conf', contact: '$ ping contato', case: '$ open relatorio-01.md' },
+    about: 'Sou Analista de TI Júnior na Wipro desde dezembro de 2024. Boa parte da minha rotina já é segurança: contas e grupos no Active Directory, MFA, BitLocker, bloqueio de USB, remoção de administrador local, patching e triagem de e-mails de phishing. Para ir além do que o trabalho me dá, construí um ambiente corporativo completo em casa e documentei tudo com evidência, inclusive o que deu errado. Busco agora a primeira posição dedicada a SOC / Blue Team.',
+    expRole: 'Analista de TI Júnior',
+    expDate: 'dez 2024 – atual',
+    expItems: [
+      'Gestão de identidade e acesso no Active Directory: contas, grupos, permissões e MFA',
+      'Hardening de estações: BitLocker, bloqueio de USB e remoção de administrador local',
+      'Patching de endpoints com ManageEngine',
+      'Triagem de e-mails suspeitos de phishing reportados por usuários',
+      'Atendimento de incidentes em fluxo ITIL (Zoho) e automação com PowerShell'
+    ],
+    cnt: ['incidentes atendidos (ITIL, Zoho)', 'máquinas preparadas ou migradas para Windows 11', 'por ano economizados com ferramentas internas', 'ramais VoIP implantados'],
+    status: { done: 'concluído', wip: 'em andamento', planned: 'planejado', studying: 'estudando' },
+    repo: 'repositório', noLink: 'sem link por enquanto', expand: '[+] expandir', collapse: '[−] recolher',
+    ctx: 'Contexto',
+    ctxText: 'Empresa fictícia de logística com cerca de 40 funcionários; depois de uma tentativa de phishing, a diretoria pede visibilidade de segurança.',
+    steps: 'Etapas',
+    stepList: ['construir', 'proteger', 'monitorar', 'atacar', 'detectar', 'responder'],
+    net: 'Rede',
+    netNote: 'pfSense FW01 no centro, regras de menor privilégio, WAN por NAT.',
+    zones: { srv: 'Servidores', usr: 'Usuários', sec: 'Segurança', atk: 'Ataque', atkNote: 'isolada, sem internet' },
+    atk: 'Ataques',
+    th: ['cenário', 'MITRE', 'evidência', 'resultado'],
+    badge: { det: 'detectado', blk: 'bloqueado', exp: 'exposição mapeada' },
+    note: 'Nota',
+    noteText: 'triagem de um falso positivo (alerta nível 15, T1105) investigado até a causa raiz, um arquivo de teste do próprio Windows. Todos os ataques tiveram como alvo apenas máquinas do laboratório, em rede isolada.',
+    hardList: ['senha mínima de 12 caracteres', 'histórico 24', 'bloqueio após 5 tentativas por 15 min', 'LLMNR e SMBv1 desativados por GPO', 'auditoria avançada (4688, 4624, 4634)', 'log de PowerShell por OU', 'USB bloqueado só na OU Financeiro', 'SIEM Wazuh + Sysmon'],
+    lRepo: 'repositório completo', lInc: 'todos os relatórios de incidente',
+    cv: 'Baixar CV',
+    evTitle: 'Evidências',
+    ev: { 'rede.png': 'Arquitetura: pfSense roteando quatro zonas isoladas', 'bruteforce.png': 'Brute force no Wazuh: 4625 em massa e conta bloqueada (4740)', 'pth.png': 'Wazuh filtrado pelo IP do Kali: logon NTLM remoto sinalizado pela regra 92652' },
+    caseTitle: 'Veja como eu documento um incidente',
+    caseText: 'Relatório com timeline, evidências, contenção e lições aprendidas.',
+    caseBtn: 'Ler o relatório', lLes: 'lições aprendidas',
+    edu: [
+      { name: 'SOC Level 1', org: 'TryHackMe', date: 'set 2026', st: 'done' },
+      { name: 'Google Cybersecurity Professional Certificate', org: 'Google', date: '2026', st: 'done' },
+      { name: 'ISC2 Certified in Cybersecurity (CC)', org: 'ISC2', date: '', st: 'studying' },
+      { name: 'Análise e Desenvolvimento de Sistemas', org: 'Anhanguera', date: 'até fev 2027', st: '' },
+      { name: 'Técnico em Mecatrônica', org: 'COTIP', date: '', st: 'done' }
+    ],
+    stackWork: 'No trabalho', stackLab: 'No laboratório', langs: 'Idiomas',
+    langsText: 'Português nativo; inglês técnico, leitura e escrita diárias.',
+    footer: 'Tudo o que aparece aqui como laboratório foi feito em ambiente próprio e isolado.'
+  },
+  en: {
+    role: 'IT Analyst · SOC / Blue Team',
+    tagline: 'I handle identity, endpoints and patching in the day-to-day of an IT operation. In my lab, I build the network, attack it and investigate what the SIEM shows.',
+    loc: 'Piracicaba, SP · Brazil',
+    open: 'Open to SOC / Junior Security roles',
+    btnLab: 'See the lab on GitHub',
+    hlTitle: 'Three attacks, three layers',
+    hl: [
+      { name: 'Brute force', mitre: 'T1110', desc: 'account locked by the lockout GPO (event 4740)' },
+      { name: 'LLMNR poisoning', mitre: 'T1557.001', desc: "the broadcast doesn't cross pfSense zones, nothing captured" },
+      { name: 'Remote persistence', mitre: 'T1021 · T1047', desc: 'detected by Wazuh (rule 92652) and stopped by Windows Defender' }
+    ],
+    sec: { about: 'about', exp: 'experience', proj: 'projects', edu: 'education', stack: 'stack', contact: 'contact' },
+    cmd: { about: '$ cat about.txt', exp: '$ cat experience.log', proj: '$ ls projects/', edu: '$ cat education.txt', stack: '$ cat stack.conf', contact: '$ ping contact', case: '$ open relatorio-01.md' },
+    about: "I've been a Junior IT Analyst at Wipro since December 2024. Much of my routine is already security: Active Directory accounts and groups, MFA, BitLocker, USB blocking, local admin removal, patching and phishing email triage. To go beyond what the job gives me, I built a complete corporate environment at home and documented everything with evidence, including what went wrong. I'm now looking for my first dedicated SOC / Blue Team role.",
+    expRole: 'Junior IT Analyst',
+    expDate: 'Dec 2024 – present',
+    expItems: [
+      'Identity and access management in Active Directory: accounts, groups, permissions and MFA',
+      'Workstation hardening: BitLocker, USB blocking and local admin removal',
+      'Endpoint patching with ManageEngine',
+      'Triage of suspected phishing emails reported by users',
+      'Incident handling in an ITIL workflow (Zoho) and PowerShell automation'
+    ],
+    cnt: ['incidents handled (ITIL, Zoho)', 'machines prepared or migrated to Windows 11', 'saved per year with in-house tools', 'VoIP extensions deployed'],
+    status: { done: 'completed', wip: 'in progress', planned: 'planned', studying: 'studying' },
+    repo: 'repository', noLink: 'no link yet', expand: '[+] expand', collapse: '[−] collapse',
+    ctx: 'Context',
+    ctxText: 'Fictional logistics company with about 40 employees; after a phishing attempt, leadership asks for security visibility.',
+    steps: 'Stages',
+    stepList: ['build', 'protect', 'monitor', 'attack', 'detect', 'respond'],
+    net: 'Network',
+    netNote: 'pfSense FW01 at the center, least-privilege rules, WAN via NAT.',
+    zones: { srv: 'Servers', usr: 'Users', sec: 'Security', atk: 'Attack', atkNote: 'isolated, no internet' },
+    atk: 'Attacks',
+    th: ['scenario', 'MITRE', 'evidence', 'result'],
+    badge: { det: 'detected', blk: 'blocked', exp: 'exposure mapped' },
+    note: 'Note',
+    noteText: 'triage of a false positive (level 15 alert, T1105) investigated down to the root cause, a test file from Windows itself. All attacks targeted only lab machines, on an isolated network.',
+    hardList: ['minimum 12-character password', 'history 24', 'lockout after 5 attempts for 15 min', 'LLMNR and SMBv1 disabled via GPO', 'advanced auditing (4688, 4624, 4634)', 'PowerShell logging per OU', 'USB blocked only in the Finance OU', 'Wazuh SIEM + Sysmon'],
+    lRepo: 'full repository', lInc: 'all incident reports',
+    cv: 'Download CV',
+    evTitle: 'Evidence',
+    ev: { 'rede.png': 'Architecture: pfSense routing four isolated zones', 'bruteforce.png': 'Brute force in Wazuh: mass 4625 and account locked (4740)', 'pth.png': 'Wazuh filtered by the Kali IP: remote NTLM logon flagged by rule 92652' },
+    caseTitle: 'See how I document an incident',
+    caseText: 'Report with timeline, evidence, containment and lessons learned.',
+    caseBtn: 'Read the report', lLes: 'lessons learned',
+    edu: [
+      { name: 'SOC Level 1', org: 'TryHackMe', date: 'Sep 2026', st: 'done' },
+      { name: 'Google Cybersecurity Professional Certificate', org: 'Google', date: '2026', st: 'done' },
+      { name: 'ISC2 Certified in Cybersecurity (CC)', org: 'ISC2', date: '', st: 'studying' },
+      { name: 'Systems Analysis and Development', org: 'Anhanguera', date: 'until Feb 2027', st: '' },
+      { name: 'Mechatronics Technician', org: 'COTIP', date: '', st: 'done' }
+    ],
+    stackWork: 'At work', stackLab: 'In the lab', langs: 'Languages',
+    langsText: 'Native Portuguese; technical English, daily reading and writing.',
+    footer: 'Everything shown here as lab work was done in my own isolated environment.'
+  }
+};
+
+const COUNTERS = [{ val: 430, suf: '+' }, { val: 170, suf: '+' }, { val: 7900, pre: 'R$ ' }, { val: 21 }];
+
+class Component extends DCLogic {
+  state = { img: {}, zoom: null, lang: 'pt', bootN: 0, bootDone: false, typed: {}, expanded: false, rows: 0, lit: false, cnt: 0, reduced: false };
+  timers = [];
+  started = {};
+
+  componentDidMount() {
+    ['foto.jpg', 'rede.png', 'bruteforce.png', 'pth.png'].forEach(f => {
+      const im = new Image();
+      im.onload = () => this.setState(s => ({ img: { ...s.img, [f]: true } }));
+      im.src = f;
+    });
+    this.onKey = e => { if (e.key === 'Escape' && this.state.zoom) this.setState({ zoom: null }); };
+    window.addEventListener('keydown', this.onKey);
+    let saved = null;
+    try { saved = localStorage.getItem('lr-portfolio-lang'); } catch (e) {}
+    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const noBoot = this.props.bootAnimation === false;
+    const expanded = !!this.props.startExpanded;
+    this.setState({ lang: saved === 'en' ? 'en' : 'pt', reduced, expanded });
+    if (reduced || noBoot) this.setState({ bootN: 6, bootDone: true });
+    else this.runBoot();
+    if (reduced) {
+      const all = {}; ['about', 'exp', 'proj', 'edu', 'stack', 'contact', 'case'].forEach(k => all[k] = 999);
+      this.setState({ typed: all, cnt: 1, rows: 6, lit: true });
+      return;
+    }
+    if (expanded) this.runRows();
+    if ('IntersectionObserver' in window) {
+      this.io = new IntersectionObserver(entries => entries.forEach(en => {
+        if (!en.isIntersecting) return;
+        const el = en.target;
+        if (el.dataset.type) this.typeTitle(el.dataset.type);
+        if (el.dataset.counters) this.runCounters();
+        this.io.unobserve(el);
+      }), { threshold: 0.4 });
+      document.querySelectorAll('[data-type],[data-counters]').forEach(el => this.io.observe(el));
+    } else {
+      const all = {}; ['about', 'exp', 'proj', 'edu', 'stack', 'contact', 'case'].forEach(k => all[k] = 999);
+      this.setState({ typed: all, cnt: 1 });
+    }
+  }
+
+  componentWillUnmount() {
+    this.timers.forEach(t => { clearTimeout(t); clearInterval(t); });
+    if (this.io) this.io.disconnect();
+    window.removeEventListener('keydown', this.onKey);
+    if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.bootRaf) cancelAnimationFrame(this.bootRaf);
+  }
+
+  later(fn, ms) { this.timers.push(setTimeout(fn, ms)); }
+
+  runBoot() {
+    const t0 = performance.now();
+    const tick = () => {
+      const el = performance.now() - t0;
+      const n = Math.max(0, Math.min(6, Math.floor((el - 450) / 85) + 1));
+      const done = el >= 450 + 6 * 85 + 260;
+      if (n !== this.state.bootN || done !== this.state.bootDone) this.setState({ bootN: n, bootDone: done });
+      if (!done) this.bootRaf = requestAnimationFrame(tick);
+    };
+    this.bootRaf = requestAnimationFrame(tick);
+    setTimeout(() => { if (!this.state.bootDone) this.setState({ bootN: 6, bootDone: true }); }, 1600);
+  }
+  componentDidUpdate() {
+    if (!this.state.bootDone && !this.bootFailsafe) {
+      this.bootFailsafe = setTimeout(() => this.setState({ bootN: 6, bootDone: true }), 1800);
+    }
+  }
+
+  typeTitle(id) {
+    if (this.started[id]) return;
+    this.started[id] = true;
+    let n = 0;
+    const iv = setInterval(() => {
+      n++;
+      const done = n >= 24;
+      this.setState(s => ({ typed: { ...s.typed, [id]: done ? 999 : n } }));
+      if (done) clearInterval(iv);
+    }, 34);
+    this.timers.push(iv);
+  }
+
+  runCounters() {
+    if (this.cntStarted) return;
+    this.cntStarted = true;
+    const t0 = performance.now(), dur = 1500;
+    const step = now => {
+      const p = Math.min(1, (now - t0) / dur);
+      this.setState({ cnt: 1 - Math.pow(1 - p, 3) });
+      if (p < 1) this.raf = requestAnimationFrame(step);
+    };
+    this.raf = requestAnimationFrame(step);
+  }
+
+  runRows() {
+    if (this.rowsStarted) return;
+    if (!this.state.reduced) this.later(() => this.typeTitle('case'), 2600);
+    this.rowsStarted = true;
+    if (this.state.reduced) { this.setState({ rows: 6, lit: true }); return; }
+    let n = 0;
+    const iv = setInterval(() => {
+      n++; this.setState({ rows: n });
+      if (n >= ATTACKS.length) { clearInterval(iv); this.later(() => this.setState({ lit: true }), 380); }
+    }, 360);
+    this.timers.push(iv);
+  }
+
+  setLang(l) {
+    try { localStorage.setItem('lr-portfolio-lang', l); } catch (e) {}
+    this.setState(s => {
+      const typed = {};
+      Object.keys(s.typed).forEach(k => typed[k] = 999);
+      return { lang: l, typed };
+    });
+    document.documentElement.lang = l === 'pt' ? 'pt-BR' : 'en';
+  }
+
+  renderVals() {
+    const { lang, bootN, bootDone, typed, expanded, rows, lit, cnt, reduced } = this.state;
+    const t = DICT[lang];
+    const loc = lang === 'pt' ? 'pt-BR' : 'en-US';
+    const h = {};
+    Object.keys(t.cmd).forEach(k => { const n = typed[k] || 0; h[k] = n >= 999 ? t.cmd[k] : t.cmd[k].slice(0, n); });
+
+    const proj = PROJECTS.map(p => ({
+      name: p.name[lang] || p.name.pt,
+      desc: p.desc[lang] || p.desc.pt,
+      tags: p.tags,
+      status: t.status[p.status],
+      color: STATUS_COLOR[p.status],
+      link: p.status === 'planned' ? null : p.link,
+      hasLink: p.status !== 'planned' && !!p.link,
+      noLink: p.status === 'planned' || !p.link,
+      borderStyle: p.status === 'planned' ? 'dashed' : 'solid',
+      borderColor: p.status === 'planned' ? '#33434d' : '#1e2a33',
+      opacity: p.status === 'planned' ? 0.55 : 1,
+      featured: !!p.featured
+    }));
+    const feat = proj.find(p => p.featured);
+
+    const attacks = ATTACKS.map((a, i) => {
+      const shown = i < rows;
+      return {
+        id: 'A-' + String(i + 1).padStart(2, '0'),
+        scen: a[lang][0], ev: a[lang][1], mitre: a.mitre,
+        op: shown ? 1 : 0, y: shown ? '0' : '8px',
+        badges: a.res.map(r => {
+          const c = BADGE_COLOR[r];
+          return lit
+            ? { label: t.badge[r], color: c, border: c, bg: c + '1f', glow: '0 0 14px ' + c + '40' }
+            : { label: t.badge[r], color: '#55646e', border: '#24313a', bg: 'transparent', glow: 'none' };
+        })
+      };
+    });
+
+    const img = this.state.img, zf = this.state.zoom;
+    const evidence = ['rede.png', 'bruteforce.png', 'pth.png'].map(file => ({ file, cap: t.ev[file], ok: !!img[file], missing: !img[file], open: () => this.setState({ zoom: file }) }));
+    return {
+      t, h,
+      img: { foto: !!img['foto.jpg'] }, noImg: { foto: !img['foto.jpg'] },
+      evidence, fotoSrc: 'foto.jpg',
+      zoomOpen: !!zf,
+      zoom: zf ? { file: zf, cap: t.ev[zf], ok: !!img[zf], missing: !img[zf] } : {},
+      closeZoom: e => { if (e) e.stopPropagation(); this.setState({ zoom: null }); },
+      scanlines: this.props.scanlines ?? true,
+      isPt: lang === 'pt', isEn: lang === 'en',
+      ptBg: lang === 'pt' ? C.acc : 'transparent', ptFg: lang === 'pt' ? '#0a0e12' : '#8a9aa6',
+      enBg: lang === 'en' ? C.acc : 'transparent', enFg: lang === 'en' ? '#0a0e12' : '#8a9aa6',
+      setPt: () => this.setLang('pt'), setEn: () => this.setLang('en'),
+      bootCmd: 'whoami'.slice(0, bootN),
+      bootCursor: bootDone ? 'none' : 'inline',
+      heroOp: bootDone ? 1 : 0, heroY: bootDone ? '0' : '10px',
+      hl: t.hl.map((x, i) => ({ ...x, color: i === 2 ? C.amb : C.acc, op: bootDone ? 1 : 0, x: bootDone ? '0' : '12px' })),
+      counters: COUNTERS.map((c, i) => ({ text: (c.pre || '') + Math.round(c.val * cnt).toLocaleString(loc) + (c.suf || ''), label: t.cnt[i] })),
+      hasFeat: !!feat, feat: feat || {},
+      gridProjects: proj.filter(p => !p.featured),
+      expanded,
+      expandLabel: expanded ? t.collapse : t.expand,
+      toggleExpand: () => { const open = !this.state.expanded; this.setState({ expanded: open }); if (open) this.runRows(); },
+      steps: t.stepList.map((s, i) => ({ label: s, arrow: i < t.stepList.length - 1 ? 'inline' : 'none' })),
+      attacks,
+      edu: t.edu.map(e => ({ ...e, st: e.st ? t.status[e.st] : '', hasSt: !!e.st, color: STATUS_COLOR[e.st] || C.mut })),
+      stackWork: STACK_WORK, stackLab: STACK_LAB
+    };
+  }
+}
+</script>
+</body>
+</html>
